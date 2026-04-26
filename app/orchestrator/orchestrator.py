@@ -142,11 +142,11 @@ class Orchestrator:
                 logger.warning(f"Search pipeline error: {pipeline_result['error']}")
                 # Fallback to LLM without search
                 prompt = build_prompt(input_text, [])
-                response = await asyncio.wait_for(
+                response, llm_used = await asyncio.wait_for(
                     self.llm_client.generate(prompt),
                     timeout=60
                 )
-                return response, True
+                return response, llm_used
             
             chunks = pipeline_result.get("chunks", [])
             high_confidence = pipeline_result.get("high_confidence", False)
@@ -160,19 +160,19 @@ class Orchestrator:
             # Otherwise, build prompt with ranked chunks and call LLM
             if chunks:
                 prompt = self.search_pipeline.build_llm_prompt(query, chunks)
-                response = await asyncio.wait_for(
+                response, llm_used = await asyncio.wait_for(
                     self.llm_client.generate(prompt),
                     timeout=60
                 )
-                return response, True
+                return response, llm_used
             else:
                 # Fallback to LLM without search results
                 prompt = build_prompt(input_text, [])
-                response = await asyncio.wait_for(
+                response, llm_used = await asyncio.wait_for(
                     self.llm_client.generate(prompt),
                     timeout=60
                 )
-                return response, True
+                return response, llm_used
         
         except asyncio.TimeoutError:
             logger.error("Search pipeline or LLM timeout")
@@ -182,11 +182,11 @@ class Orchestrator:
             # Fallback to LLM without search
             prompt = build_prompt(input_text, [])
             try:
-                response = await asyncio.wait_for(
+                response, llm_used = await asyncio.wait_for(
                     self.llm_client.generate(prompt),
                     timeout=60
                 )
-                return response, True
+                return response, llm_used
             except asyncio.TimeoutError:
                 return "Request timed out. Please try again.", False
     
@@ -197,11 +197,11 @@ class Orchestrator:
         # Use LLM with memory context
         prompt = build_prompt(request.input, memory_texts)
         try:
-            response = await asyncio.wait_for(
+            response, llm_used = await asyncio.wait_for(
                 self.llm_client.generate(prompt), 
                 timeout=60
             )
-            return response, True
+            return response, llm_used
         except (asyncio.TimeoutError, Exception):
             return "Still working on that, try again.", False
     
@@ -210,10 +210,10 @@ class Orchestrator:
         memory_texts = [str(ctx) for ctx in request.memory_context]
         prompt = build_prompt(request.input, memory_texts)
         try:
-            response = await asyncio.wait_for(
+            response, llm_used = await asyncio.wait_for(
                 self.llm_client.generate(prompt), 
                 timeout=60
             )
-            return response, True
+            return response, llm_used
         except (asyncio.TimeoutError, Exception):
             return "Still working on that, try again.", False

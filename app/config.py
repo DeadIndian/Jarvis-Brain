@@ -26,6 +26,7 @@ class ServerConfig:
             return
 
         resolved_model_path = model_path or os.getenv("LLM_MODEL_PATH", DEFAULT_MODEL_PATH)
+        print(f"Initializing LLM with model path: {resolved_model_path}")
         
         try:
             self.llm_worker = LLMWorker(model_path=resolved_model_path)

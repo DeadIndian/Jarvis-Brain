@@ -306,6 +306,34 @@ Error: Model path does not exist: models/Llama-3.2-1B-Instruct-Q4_K_M.gguf
 
 **Solution**: Ensure model file is downloaded to `models/` directory and `LLM_MODEL_PATH` points to the correct filename
 
+### Still Seeing Qwen Model Path In Logs
+
+If logs still show `models/Qwen3-4B-Q6_K.gguf`, your running container is using an older image/code version.
+
+```bash
+# Stop and remove old container (if running)
+docker stop jarvis-server || true
+docker rm jarvis-server || true
+
+# Rebuild with latest code
+docker build --no-cache -t jarvis-server .
+
+# Ensure Llama model file exists locally
+ls -lh models/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+
+# Start with explicit model path
+docker run -d \
+  --name jarvis-server \
+  -v $(pwd)/models:/app/models \
+  -p 8000:8000 \
+  -e JARVIS_API_KEY=$JARVIS_API_KEY \
+  -e LLM_MODEL_PATH=models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
+  jarvis-server
+
+# Verify startup picked the right path
+docker logs jarvis-server | grep "Initializing LLM with model path"
+```
+
 ### Docker Volume Issues
 
 ```
