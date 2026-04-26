@@ -1,20 +1,25 @@
 import time
 import asyncio
+import logging
 from typing import List, Dict, Any
 from ..api.models import RemoteRequest, RemoteResponse
 from .classifier import RequestClassifier, RequestType
 from ..tools.tool_registry import tool_registry
 from ..tools.time_tool import TimeTool
 from ..tools.web_search import WebSearchTool
+from ..tools.search_pipeline import SearchPipeline
 from ..llm.llm_client import LLMClient
 from ..llm.prompt_builder import build_prompt
 from ..utils.logging import log_request
+
+logger = logging.getLogger(__name__)
 
 
 class Orchestrator:
     def __init__(self, llm_client=None):
         self.classifier = RequestClassifier()
         self.llm_client = llm_client or LLMClient()
+        self.search_pipeline = SearchPipeline()
         
         # Register tools
         tool_registry.register(TimeTool())
@@ -122,22 +127,68 @@ class Orchestrator:
             time_tool = tool_registry.get_tool("time")
             return await time_tool.execute({}), False
         
-        # Use web search for fact queries that match patterns
-        web_tool = tool_registry.get_tool("web_search")
+        # Use optimized search pipeline for fact queries
         query = input_text.strip()
-        search_result = await web_tool.execute({"query": query})
         
-        # If web search succeeds, feed results to LLM
-        if isinstance(search_result, dict) and search_result.get("success"):
-            search_results = search_result.get("results", [])
-            prompt = build_prompt(input_text, [], search_results)
-            response = await self.llm_client.generate(prompt)
-            return response, True
-        else:
-            # Fallback to LLM without search results
+        try:
+            # Run search pipeline with timeout
+            pipeline_result = await asyncio.wait_for(
+                asyncio.to_thread(self.search_pipeline.run, query),
+                timeout=60
+            )
+            
+            # Check for errors
+            if pipeline_result.get("error"):
+                logger.warning(f"Search pipeline error: {pipeline_result['error']}")
+                # Fallback to LLM without search
+                prompt = build_prompt(input_text, [])
+                response = await asyncio.wait_for(
+                    self.llm_client.generate(prompt),
+                    timeout=60
+                )
+                return response, True
+            
+            chunks = pipeline_result.get("chunks", [])
+            high_confidence = pipeline_result.get("high_confidence", False)
+            
+            logger.info(f"Search pipeline returned {len(chunks)} chunks, high_confidence={high_confidence}")
+            
+            # If high confidence, return direct answer without LLM
+            if high_confidence and pipeline_result.get("direct_answer"):
+                return pipeline_result["direct_answer"], False
+            
+            # Otherwise, build prompt with ranked chunks and call LLM
+            if chunks:
+                prompt = self.search_pipeline.build_llm_prompt(query, chunks)
+                response = await asyncio.wait_for(
+                    self.llm_client.generate(prompt),
+                    timeout=60
+                )
+                return response, True
+            else:
+                # Fallback to LLM without search results
+                prompt = build_prompt(input_text, [])
+                response = await asyncio.wait_for(
+                    self.llm_client.generate(prompt),
+                    timeout=60
+                )
+                return response, True
+        
+        except asyncio.TimeoutError:
+            logger.error("Search pipeline or LLM timeout")
+            return "Request timed out. Please try again.", False
+        except Exception as e:
+            logger.error(f"Search pipeline exception: {e}")
+            # Fallback to LLM without search
             prompt = build_prompt(input_text, [])
-            response = await self.llm_client.generate(prompt)
-            return response, True
+            try:
+                response = await asyncio.wait_for(
+                    self.llm_client.generate(prompt),
+                    timeout=60
+                )
+                return response, True
+            except asyncio.TimeoutError:
+                return "Request timed out. Please try again.", False
     
     async def _handle_memory_query(self, request: RemoteRequest) -> tuple[str, bool]:
         # Extract memory context
@@ -148,7 +199,7 @@ class Orchestrator:
         try:
             response = await asyncio.wait_for(
                 self.llm_client.generate(prompt), 
-                timeout=10
+                timeout=60
             )
             return response, True
         except (asyncio.TimeoutError, Exception):
@@ -161,7 +212,7 @@ class Orchestrator:
         try:
             response = await asyncio.wait_for(
                 self.llm_client.generate(prompt), 
-                timeout=10
+                timeout=60
             )
             return response, True
         except (asyncio.TimeoutError, Exception):
