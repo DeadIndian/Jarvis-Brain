@@ -18,7 +18,7 @@ app = FastAPI(
 setup_logging()
 
 # Initialize LLM system through config
-config.initialize_llm(model_path="models/Qwen3-4B-Q6_K.gguf")
+config.initialize_llm()
 
 # Register cleanup
 def cleanup():

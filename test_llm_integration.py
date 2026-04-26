@@ -70,7 +70,7 @@ async def test_worker_functionality():
     
     try:
         # Try to initialize worker (will fail if model not found)
-        worker = LLMWorker(model_path="models/qwen-4b.gguf")
+        worker = LLMWorker(model_path="models/Llama-3.2-1B-Instruct-Q4_K_M.gguf")
         client = LLMClient(worker=worker)
         orchestrator = Orchestrator(llm_client=client)
         

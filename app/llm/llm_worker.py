@@ -6,7 +6,7 @@ from llama_cpp import Llama
 
 
 class LLMWorker:
-    def __init__(self, model_path: str = "models/qwen-4b.gguf"):
+    def __init__(self, model_path: str = "models/Llama-3.2-1B-Instruct-Q4_K_M.gguf"):
         self.model_path = model_path
         self.llm = None
         self.request_queue = queue.Queue()

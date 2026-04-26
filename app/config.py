@@ -8,6 +8,9 @@ from .llm.llm_worker import LLMWorker
 from .llm.llm_client import LLMClient
 
 
+DEFAULT_MODEL_PATH = "models/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+
+
 class ServerConfig:
     """Global server configuration and dependency container"""
     
@@ -17,13 +20,15 @@ class ServerConfig:
         self._initialized = False
         self.api_key = os.getenv("JARVIS_API_KEY", "your-secret-api-key-change-this")
     
-    def initialize_llm(self, model_path: str = "models/Qwen3-4B-Q6_K.gguf"):
+    def initialize_llm(self, model_path: Optional[str] = None):
         """Initialize LLM worker and client"""
         if self._initialized:
             return
+
+        resolved_model_path = model_path or os.getenv("LLM_MODEL_PATH", DEFAULT_MODEL_PATH)
         
         try:
-            self.llm_worker = LLMWorker(model_path=model_path)
+            self.llm_worker = LLMWorker(model_path=resolved_model_path)
             self.llm_client = LLMClient(worker=self.llm_worker)
             print("LLM system initialized successfully")
         except Exception as e:

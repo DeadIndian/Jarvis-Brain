@@ -2,42 +2,48 @@
 
 ## Implementation Complete ✅
 
-Successfully integrated llama.cpp with Qwen 4B model into Jarvis Server using a safe, non-blocking architecture.
+Successfully integrated llama.cpp with Llama 3.2 1B model into Jarvis Server using a safe, non-blocking architecture.
 
 ## Key Components Implemented
 
 ### 1. LLM Worker (`app/llm/llm_worker.py`)
+
 - **Single worker thread** with request queue
 - **Non-blocking async interface** using asyncio Futures
 - **Model loaded once** at initialization
 - **Graceful shutdown** handling
 - **Thread-safe** request processing
 
-### 2. Updated LLM Client (`app/llm/llm_client.py`)  
+### 2. Updated LLM Client (`app/llm/llm_client.py`)
+
 - **Worker integration** instead of dummy responses
 - **Timeout handling** (10s default)
 - **Fallback responses** on errors
 - **Exception safety**
 
 ### 3. Strict Prompt Builder (`app/llm/prompt_builder.py`)
+
 - **Exact format** as specified
 - **80 token limit** enforcement
 - **Context integration**
 - **Concise responses** only
 
 ### 4. Enhanced Orchestrator (`app/orchestrator/orchestrator.py`)
+
 - **Timeout protection** for LLM calls
 - **Error handling** with fallbacks
 - **LLM usage tracking**
 - **Request type optimization**
 
 ### 5. Dependency Injection (`app/config.py`)
+
 - **Circular import prevention**
 - **Centralized configuration**
 - **Clean initialization**
 - **Proper cleanup**
 
 ### 6. Updated Infrastructure
+
 - **Requirements.txt**: Added llama-cpp-python
 - **Dockerfile**: Build tools for compilation
 - **Main.py**: LLM initialization at startup
@@ -49,11 +55,12 @@ Successfully integrated llama.cpp with Qwen 4B model into Jarvis Server using a 
 ✅ **Request Queuing**: CPU constraint management  
 ✅ **Timeout Protection**: Prevents hanging  
 ✅ **Error Safety**: Graceful fallbacks  
-✅ **Modular Design**: Clean separation  
+✅ **Modular Design**: Clean separation
 
 ## Testing Results
 
 ### Simple Queries (No LLM)
+
 ```bash
 curl -X POST "/api/process" -d '{"input": "What time is it?"}'
 # Response: "Current time: 2026-04-26 18:23:39"
@@ -61,6 +68,7 @@ curl -X POST "/api/process" -d '{"input": "What time is it?"}'
 ```
 
 ### Complex Queries (LLM Required)
+
 ```bash
 curl -X POST "/api/process" -d '{"input": "Explain quantum computing"}'
 # Response: "Still working on that, try again." (fallback when no model)
@@ -68,6 +76,7 @@ curl -X POST "/api/process" -d '{"input": "Explain quantum computing"}'
 ```
 
 ### Casual Chat (No LLM)
+
 ```bash
 curl -X POST "/api/process" -d '{"input": "hello"}'
 # Response: "Hi there! What can I do for you?"
@@ -76,12 +85,12 @@ curl -X POST "/api/process" -d '{"input": "hello"}'
 
 ## Model Integration
 
-**Ready for Qwen 4B**: Place `models/qwen-4b.gguf` in server directory
+**Ready for Llama 3.2 1B**: Place `models/Llama-3.2-1B-Instruct-Q4_K_M.gguf` in server directory
 
 ```bash
 # Download model (example)
 mkdir -p models
-# Add your qwen-4b.gguf file here
+# Add your Llama-3.2-1B-Instruct-Q4_K_M.gguf file here
 
 # Server will auto-detect and use it
 ```
@@ -96,7 +105,7 @@ mkdir -p models
 
 ## Next Steps
 
-1. **Add Qwen 4B model** to `models/` directory
+1. **Add Llama 3.2 1B model** to `models/` directory
 2. **Test with real LLM** responses
 3. **Fine-tune parameters** (threads, batch size)
 4. **Monitor performance** under load

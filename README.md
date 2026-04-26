@@ -30,7 +30,7 @@ echo $JARVIS_API_KEY
 
 ### Step 3: Download the LLM Model
 
-Create the models directory and download the Qwen 4B model (3.1GB):
+Create the models directory and download the Llama 3.2 1B Instruct model (Q4 quantized, ~0.8GB):
 
 ```bash
 # Create models directory
@@ -38,11 +38,11 @@ mkdir -p models
 
 # Download the model
 cd models
-wget https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q6_K.gguf
+wget https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf
 
 # Verify the download
-ls -lh Qwen3-4B-Q6_K.gguf
-# Should show approximately 3.1GB
+ls -lh Llama-3.2-1B-Instruct-Q4_K_M.gguf
+# Should show approximately 0.8GB
 
 cd ..
 ```
@@ -63,6 +63,7 @@ docker run -d \
   -v $(pwd)/models:/app/models \
   -p 8000:8000 \
   -e JARVIS_API_KEY=$JARVIS_API_KEY \
+  -e LLM_MODEL_PATH=models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
   --memory=2g \
   --cpus=2 \
   jarvis-server
@@ -76,6 +77,7 @@ docker run -d \
   -v $(pwd)/models:/app/models \
   -p 8000:8000 \
   -e JARVIS_API_KEY=$JARVIS_API_KEY \
+  -e LLM_MODEL_PATH=models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
   -e CORS_ORIGINS=https://your-app-domain.com,https://another-domain.com \
   --memory=2g \
   --cpus=2 \
@@ -125,13 +127,14 @@ docker rm jarvis-server
 ### Environment Variables
 
 - **JARVIS_API_KEY** (required): Secure random API key for authentication
+- **LLM_MODEL_PATH** (optional): Model file path (default: `models/Llama-3.2-1B-Instruct-Q4_K_M.gguf`)
 - **CORS_ORIGINS** (optional): Comma-separated list of allowed CORS origins (default: `*`)
 
 ## Overview
 
 Jarvis Server is a deterministic-first backend service that acts as central intelligence layer for a distributed assistant system. It prioritizes tool-based execution over LLM-driven orchestration and is designed to be modular, CPU-only, and compatible with small local models.
 
-**✅ LLM Integration**: Now includes Qwen 4B model with llama.cpp for local inference  
+**✅ LLM Integration**: Tuned for Llama 3.2 1B model with llama.cpp for local inference  
 **🚀 Non-blocking**: Async architecture with request queuing  
 **🔧 Production Ready**: Docker support with comprehensive error handling
 
@@ -144,7 +147,7 @@ Jarvis Server is a deterministic-first backend service that acts as central inte
 - **Classifier**: Rule-based request classification (no ML/LLM)
 - **Tool System**: Extensible tool registry with time and web search tools
 - **Memory Layer**: Structured memory storage and retrieval (future write API)
-- **LLM Layer**: Integrated Qwen 4B model with llama.cpp worker thread
+- **LLM Layer**: Integrated Llama 3.2 1B model with llama.cpp worker thread
 
 ### Request Types
 
@@ -168,7 +171,7 @@ Jarvis-Brain/
 │   ├── config.py           # Configuration
 │   └── utils/             # Utilities
 ├── models/                # LLM model files
-│   └── Qwen3-4B-Q6_K.gguf
+│   └── Llama-3.2-1B-Instruct-Q4_K_M.gguf
 ├── Dockerfile             # Container configuration
 ├── requirements.txt       # Python dependencies
 └── README.md             # This file
@@ -231,10 +234,10 @@ Content-Type: application/json
 
 ## Model Information
 
-**Current Model**: Qwen3-4B-Q6_K.gguf
+**Current Model**: Llama-3.2-1B-Instruct-Q4_K_M.gguf
 
-- **Size**: 3.1GB
-- **Quantization**: Q6_K (6-bit quantized)
+- **Size**: ~0.8GB
+- **Quantization**: Q4_K_M (4-bit quantized)
 - **Context Window**: 4096 tokens
 - **Max Response**: 80 tokens
 - **Inference**: CPU-only, single-threaded queue
@@ -261,10 +264,10 @@ python test_api.py
 
 ```bash
 # Test model loading
-python -c "from app.llm.llm_worker import LLMWorker; LLMWorker('models/Qwen3-4B-Q6_K.gguf')"
+python -c "from app.llm.llm_worker import LLMWorker; LLMWorker('models/Llama-3.2-1B-Instruct-Q4_K_M.gguf')"
 
 # Check model file integrity
-file models/Qwen3-4B-Q6_K.gguf
+file models/Llama-3.2-1B-Instruct-Q4_K_M.gguf
 ```
 
 ## Design Principles
@@ -297,10 +300,11 @@ file models/Qwen3-4B-Q6_K.gguf
 ### Model Not Found
 
 ```
-Error: Model path does not exist: models/Qwen3-4B-Q6_K.gguf
+Error: Model path does not exist: models/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+
 ```
 
-**Solution**: Ensure model file is downloaded to `models/` directory
+**Solution**: Ensure model file is downloaded to `models/` directory and `LLM_MODEL_PATH` points to the correct filename
 
 ### Docker Volume Issues
 
