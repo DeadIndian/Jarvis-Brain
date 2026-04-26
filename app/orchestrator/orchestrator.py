@@ -100,7 +100,19 @@ class Orchestrator:
             web_tool = tool_registry.get_tool("web_search")
             # Extract query from input (remove "search for", "search", etc.)
             query = input_text.lower().replace("search for", "").replace("search", "").strip()
-            return await web_tool.execute({"query": query})
+            search_result = await web_tool.execute({"query": query})
+            
+            # Format search results for display
+            if isinstance(search_result, dict) and search_result.get("success"):
+                results = search_result.get("results", [])
+                formatted = []
+                for r in results:
+                    formatted.append(f"- [{r.get('credibility_score', 5)}/10] {r.get('title', '')}: {r.get('body', '')[:150]}")
+                return f"Search results:\n" + "\n".join(formatted)
+            elif isinstance(search_result, dict):
+                return search_result.get("error", "Search failed")
+            else:
+                return str(search_result)
         
         return "I can help with that. What specific action would you like me to take?"
     
@@ -113,7 +125,19 @@ class Orchestrator:
         # Use web search for fact queries that match patterns
         web_tool = tool_registry.get_tool("web_search")
         query = input_text.strip()
-        return await web_tool.execute({"query": query}), False
+        search_result = await web_tool.execute({"query": query})
+        
+        # If web search succeeds, feed results to LLM
+        if isinstance(search_result, dict) and search_result.get("success"):
+            search_results = search_result.get("results", [])
+            prompt = build_prompt(input_text, [], search_results)
+            response = await self.llm_client.generate(prompt)
+            return response, True
+        else:
+            # Fallback to LLM without search results
+            prompt = build_prompt(input_text, [])
+            response = await self.llm_client.generate(prompt)
+            return response, True
     
     async def _handle_memory_query(self, request: RemoteRequest) -> tuple[str, bool]:
         # Extract memory context
