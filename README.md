@@ -2,6 +2,131 @@
 
 Central intelligence layer for distributed assistant system with local LLM integration.
 
+## Production Docker Setup (Recommended)
+
+Follow these steps to deploy Jarvis Server in production using Docker.
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/DeadIndian/Jarvis-Brain.git
+cd Jarvis-Brain
+```
+
+### Step 2: Generate a Secure API Key
+
+Generate a secure random API key for authentication:
+
+```bash
+# Using OpenSSL
+export JARVIS_API_KEY=$(openssl rand -hex 32)
+
+# Or using Python
+export JARVIS_API_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+
+# Verify the key was generated
+echo $JARVIS_API_KEY
+```
+
+### Step 3: Download the LLM Model
+
+Create the models directory and download the Qwen 4B model (3.1GB):
+
+```bash
+# Create models directory
+mkdir -p models
+
+# Download the model
+cd models
+wget https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q6_K.gguf
+
+# Verify the download
+ls -lh Qwen3-4B-Q6_K.gguf
+# Should show approximately 3.1GB
+
+cd ..
+```
+
+### Step 4: Build the Docker Image
+
+```bash
+docker build -t jarvis-server .
+```
+
+### Step 5: Run the Container
+
+Run the container with the model volume mounted and API key configured:
+
+```bash
+docker run -d \
+  --name jarvis-server \
+  -v $(pwd)/models:/app/models \
+  -p 8000:8000 \
+  -e JARVIS_API_KEY=$JARVIS_API_KEY \
+  --memory=2g \
+  --cpus=2 \
+  jarvis-server
+```
+
+**Optional**: Restrict CORS origins to your specific domains:
+
+```bash
+docker run -d \
+  --name jarvis-server \
+  -v $(pwd)/models:/app/models \
+  -p 8000:8000 \
+  -e JARVIS_API_KEY=$JARVIS_API_KEY \
+  -e CORS_ORIGINS=https://your-app-domain.com,https://another-domain.com \
+  --memory=2g \
+  --cpus=2 \
+  jarvis-server
+```
+
+### Step 6: Verify the Deployment
+
+Check that the container is running:
+
+```bash
+docker ps | grep jarvis-server
+```
+
+Test the API with your generated API key:
+
+```bash
+# Test a simple query
+curl -X POST "http://localhost:8000/api/process" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $JARVIS_API_KEY" \
+  -d '{"input": "hello", "memory_context": []}'
+
+# Test LLM query
+curl -X POST "http://localhost:8000/api/process" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $JARVIS_API_KEY" \
+  -d '{"input": "What is the capital of France?", "memory_context": []}'
+```
+
+### Step 7: Manage the Container
+
+```bash
+# View logs
+docker logs -f jarvis-server
+
+# Stop the container
+docker stop jarvis-server
+
+# Start the container
+docker start jarvis-server
+
+# Remove the container
+docker rm jarvis-server
+```
+
+### Environment Variables
+
+- **JARVIS_API_KEY** (required): Secure random API key for authentication
+- **CORS_ORIGINS** (optional): Comma-separated list of allowed CORS origins (default: `*`)
+
 ## Overview
 
 Jarvis Server is a deterministic-first backend service that acts as central intelligence layer for a distributed assistant system. It prioritizes tool-based execution over LLM-driven orchestration and is designed to be modular, CPU-only, and compatible with small local models.
@@ -49,82 +174,17 @@ Jarvis-Brain/
 └── README.md             # This file
 ```
 
-## Quick Start
+## Security
 
-### Option 1: Docker (Recommended)
+The Jarvis Server requires API key authentication to prevent unauthorized access. All requests to protected endpoints must include a valid API key in the `X-API-Key` header.
 
-#### Step 1: Install Model Locally
+**Security Best Practices**:
 
-```bash
-# Create models directory
-mkdir -p models
-
-# Download Qwen 4B model (3.1GB)
-cd models
-wget https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q6_K.gguf
-
-# Verify model downloaded
-ls -lh Qwen3-4B-Q6_K.gguf
-# Should show: -rw-r--r-- 1 user user 3.1G [date] Qwen3-4B-Q6_K.gguf
-```
-
-#### Step 2: Build and Run Docker
-
-```bash
-# Build Docker image
-docker build -t jarvis-server .
-
-# Run with model volume mounted
-docker run -v $(pwd)/models:/app/models -p 8000:8000 jarvis-server
-```
-
-#### Step 3: Verify Installation
-
-```bash
-# Test simple query (no LLM)
-curl -X POST "http://localhost:8000/api/process" \
-  -H "Content-Type: application/json" \
-  -d '{"input": "hello", "memory_context": []}'
-
-# Test LLM query
-curl -X POST "http://localhost:8000/api/process" \
-  -H "Content-Type: application/json" \
-  -d '{"input": "What is the capital of France?", "memory_context": []}'
-```
-
-### Option 2: Local Development
-
-#### Step 1: Setup Environment
-
-```bash
-# Clone repository
-git clone https://github.com/DeadIndian/Jarvis-Brain.git
-cd Jarvis-Brain
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-#### Step 2: Install Model
-
-```bash
-# Create models directory and download model
-mkdir -p models
-cd models
-wget https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q6_K.gguf
-cd ..
-```
-
-#### Step 3: Run Server
-
-```bash
-# Start the server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+- Generate a strong, random API key (at least 32 characters) using the commands in Step 2
+- Set `CORS_ORIGINS` to your specific app domains in production
+- Use environment variables or secrets management for storing the API key
+- Rotate API keys periodically
+- Never expose API keys in client-side code
 
 ## API Usage
 
@@ -138,6 +198,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 	"memory_context": [],
 	"client_state": {}
 }
+```
+
+**Headers:**
+
+```
+X-API-Key: your-secure-random-api-key-here
+Content-Type: application/json
 ```
 
 **Response:**
@@ -154,6 +221,14 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 }
 ```
 
+**Error Response (Invalid API Key):**
+
+```json
+{
+	"detail": "Invalid API key"
+}
+```
+
 ## Model Information
 
 **Current Model**: Qwen3-4B-Q6_K.gguf
@@ -163,29 +238,6 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - **Context Window**: 4096 tokens
 - **Max Response**: 80 tokens
 - **Inference**: CPU-only, single-threaded queue
-
-## Docker Advanced Usage
-
-### Custom Model Path
-
-```bash
-# Mount different model directory
-docker run -v /path/to/your/models:/app/models -p 8000:8000 jarvis-server
-```
-
-### Development Mode
-
-```bash
-# Mount source code for live reload
-docker run -v $(pwd):/app -v $(pwd)/models:/app/models -p 8000:8000 jarvis-server uvicorn app.main:app --reload
-```
-
-### Production Mode
-
-```bash
-# Run with resource limits
-docker run --memory=2g --cpus=2 -v $(pwd)/models:/app/models -p 8000:8000 jarvis-server
-```
 
 ## Development
 

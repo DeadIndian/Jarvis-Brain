@@ -2,6 +2,7 @@
 Configuration and dependency injection for Jarvis Server
 """
 
+import os
 from typing import Optional
 from .llm.llm_worker import LLMWorker
 from .llm.llm_client import LLMClient
@@ -14,6 +15,7 @@ class ServerConfig:
         self.llm_worker: Optional[LLMWorker] = None
         self.llm_client: Optional[LLMClient] = None
         self._initialized = False
+        self.api_key = os.getenv("JARVIS_API_KEY", "your-secret-api-key-change-this")
     
     def initialize_llm(self, model_path: str = "models/Qwen3-4B-Q6_K.gguf"):
         """Initialize LLM worker and client"""

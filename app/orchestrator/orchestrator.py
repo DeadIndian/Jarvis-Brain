@@ -98,7 +98,9 @@ class Orchestrator:
         
         if "search" in input_text.lower():
             web_tool = tool_registry.get_tool("web_search")
-            return await web_tool.execute({})
+            # Extract query from input (remove "search for", "search", etc.)
+            query = input_text.lower().replace("search for", "").replace("search", "").strip()
+            return await web_tool.execute({"query": query})
         
         return "I can help with that. What specific action would you like me to take?"
     
@@ -108,14 +110,10 @@ class Orchestrator:
             time_tool = tool_registry.get_tool("time")
             return await time_tool.execute({}), False
         
-        if "search" in input_text.lower():
-            web_tool = tool_registry.get_tool("web_search")
-            return await web_tool.execute({}), False
-        
-        # Fallback to LLM
-        prompt = build_prompt(input_text, [])
-        response = await self.llm_client.generate(prompt)
-        return response, True
+        # Use web search for fact queries that match patterns
+        web_tool = tool_registry.get_tool("web_search")
+        query = input_text.strip()
+        return await web_tool.execute({"query": query}), False
     
     async def _handle_memory_query(self, request: RemoteRequest) -> tuple[str, bool]:
         # Extract memory context

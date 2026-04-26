@@ -216,6 +216,7 @@ logs/
 .env.development
 .env.production
 config.local.py
+.env.example
 
 # Database
 *.db

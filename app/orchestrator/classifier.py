@@ -31,6 +31,13 @@ class RequestClassifier:
             "hi", "hello", "hey", "thanks", "thank you", "bye", "goodbye",
             "how are you", "what's up", "nice", "cool", "awesome", "great"
         ]
+        
+        self.fact_query_patterns = [
+            "capital of", "president of", "population of", "who is the", "what is the",
+            "when was", "where is", "how many", "current", "latest", "definition of",
+            "meaning of", "history of", "founded", "established", "born", "died",
+            "ceo of", "founder of", "located in", "currency of", "language of"
+        ]
     
     def classify(self, input_text: str) -> RequestType:
         text = input_text.lower().strip()
@@ -46,6 +53,10 @@ class RequestClassifier:
         # Check for memory queries
         if any(keyword in text for keyword in self.memory_keywords):
             return RequestType.MEMORY_QUERY
+        
+        # Check for fact query patterns (specific factual lookups)
+        if any(pattern in text for pattern in self.fact_query_patterns):
+            return RequestType.FACT_QUERY
         
         # Check for direct actions/fact queries
         if any(keyword in text for keyword in self.action_keywords):
